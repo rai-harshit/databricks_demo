@@ -9,7 +9,7 @@ Auth resolution (in order):
   2. Otherwise the Databricks SDK `Config()` is used. In a deployed App that
      resolves to the app service principal via the standard env vars; locally
      it falls back to whatever the active CLI profile provides
-     (e.g. `DATABRICKS_CONFIG_PROFILE=dbrx_free`).
+     (set `DATABRICKS_CONFIG_PROFILE=<your-profile>`).
 """
 
 from __future__ import annotations
@@ -22,11 +22,15 @@ import pandas as pd
 from databricks import sql
 from databricks.sdk.core import Config
 
-DEFAULT_WAREHOUSE_ID = "5a0ae21a29c598a3"
-
-
 def _warehouse_id() -> str:
-    return os.environ.get("DATABRICKS_WAREHOUSE_ID", DEFAULT_WAREHOUSE_ID)
+    wid = os.environ.get("DATABRICKS_WAREHOUSE_ID", "").strip()
+    if not wid:
+        raise RuntimeError(
+            "DATABRICKS_WAREHOUSE_ID is not set. Locally, export it alongside "
+            "DATABRICKS_CONFIG_PROFILE; in Databricks Apps it is populated "
+            "automatically from the `sql_warehouse` resource in app.yaml."
+        )
+    return wid
 
 
 def _server_hostname(cfg: Config | None = None) -> str:

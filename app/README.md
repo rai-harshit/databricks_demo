@@ -1,19 +1,18 @@
 # Geographic Market Intelligence — Streamlit App
 
-A Databricks App that shows three tabs for the Eli Lilly demo:
+A Databricks App that shows three tabs:
 
-1. **📊 Dashboard** — embeds the published AI/BI dashboard
-   `Population Health Executive Dashboard - Eli Lilly`
-   (`dashboard_id = 01f13ac6dda01c0da0fc8039401cd345`) via an iframe.
-2. **🗺️ Build Territory** — form that writes user-defined geographic
-   territories to `eli_lilly_demo.app_data.territory_definitions`.
-3. **📋 View Territories** — shared, multi-user view of every saved territory
+1. **Dashboard** — embeds a published AI/BI dashboard via iframe.
+2. **Build Territory** — form that writes user-defined geographic territories
+   to a Delta table.
+3. **View Territories** — shared, multi-user view of every saved territory
    with filters, CSV export, delete, and a patient-per-territory rollup.
 
-## Repository layout
+The repo ships with the Eli Lilly demo defaults, but **every workspace-specific
+value is configurable via environment variables** — you do not need to edit
+any Python to run it against your own catalog, warehouse, or dashboard.
 
-The app lives inside the `app/` sub-folder of the repo. Relative to the
-repo root:
+## Repository layout
 
 ```
 .
@@ -21,64 +20,92 @@ repo root:
 │   ├── app.py                        # Streamlit entry, 3 tabs
 │   ├── app.yaml                      # Databricks Apps deployment config
 │   ├── requirements.txt              # Python deps
+│   ├── .env.example                  # Template for local env vars
 │   ├── lib/
-│   │   ├── db.py                     # databricks-sql-connector helpers (OBO + SP)
+│   │   ├── config.py                 # All env-driven config (catalog, dashboard, …)
+│   │   ├── db.py                     # SQL connector helpers (OBO + SP)
 │   │   └── queries.py                # All SQL strings used by the app
 │   └── scripts/
-│       └── bootstrap_schema.sql      # CREATE SCHEMA + CREATE TABLE
+│       ├── bootstrap_schema.sql      # CREATE SCHEMA + CREATE TABLE
+│       └── grant_sp_access.sql       # Grants for the app service principal
 ├── data_pipeline/                    # Medallion notebook for the source tables
 │   └── healthcare_claims_medallion_pipeline.ipynb
 └── dashboard/                        # Exported AI/BI dashboard definition
     └── population_health_executive_dashboard.lvdash.json
 ```
 
-All commands in this README assume you are running them from the **`app/`**
-directory (the one containing `app.yaml`).
+All commands below assume you are running them from the **`app/`** directory
+(the one containing `app.yaml`).
+
+## Configuration reference
+
+| Setting | Env var | Default | Where it's used |
+| --- | --- | --- | --- |
+| Workspace host | (CLI profile) | — | `databricks auth login --host …` |
+| CLI profile name | `DATABRICKS_CONFIG_PROFILE` | — | Local auth |
+| SQL Warehouse ID | `DATABRICKS_WAREHOUSE_ID` | — | Every query the app runs |
+| Unity Catalog | `APP_CATALOG` | `eli_lilly_demo` | `lib/config.py` |
+| Silver schema | `APP_SILVER_SCHEMA` | `silver_claims` | Source `diagnosis` table |
+| Gold schema | `APP_GOLD_SCHEMA` | `gold_claims` | Source `patient_summary` table |
+| App schema | `APP_SCHEMA` | `app_data` | Territory Delta table |
+| Dashboard ID | `APP_DASHBOARD_ID` | (demo dashboard) | Tab 1 iframe |
+| Dashboard name | `APP_DASHBOARD_NAME` | `Population Health Executive Dashboard` | Tab 1 title |
+
+> **Pick your values now and keep them handy** — you'll plug them into the CLI
+> commands, `app.yaml`, and the SQL scripts below.
 
 ## One-time workspace setup
 
-### 1. Authenticate
+### 1. Authenticate the CLI
 
 ```bash
 databricks auth login \
-  --host https://dbc-c294909e-40e9.cloud.databricks.com \
-  --profile dbrx_free
-databricks current-user me --profile dbrx_free
+  --host https://<YOUR_WORKSPACE_HOST> \
+  --profile <YOUR_PROFILE_NAME>
+
+databricks current-user me --profile <YOUR_PROFILE_NAME>
 ```
 
-### 2. Import the source tables
+### 2. Load the source tables
 
 Import `../data_pipeline/healthcare_claims_medallion_pipeline.ipynb` into your
-workspace and run it once. It populates:
+workspace and run it once. Out of the box it writes to:
 
-- `eli_lilly_demo.silver_claims.*` (diagnosis, medical_claim, ...)
-- `eli_lilly_demo.gold_claims.patient_summary` (1,485 rows)
+- `eli_lilly_demo.silver_claims.*` (`diagnosis`, `medical_claim`, …)
+- `eli_lilly_demo.gold_claims.patient_summary`
 - `eli_lilly_demo.gold_claims.claims_analytics`
 
-### 3. Import the dashboard (optional — the app iframes the published version)
+If you want different names, edit the notebook constants **and** set the
+matching `APP_*` env vars in step 5.
 
-Upload `../dashboard/population_health_executive_dashboard.lvdash.json` to
-the workspace via **AI/BI Dashboards → Import dashboard**, attach warehouse
-`5a0ae21a29c598a3`, then click **Publish → Embed credentials**.
+### 3. Import the dashboard (optional)
 
-### 4. Bootstrap the app-owned Delta storage
+Only needed if you want the Tab 1 iframe to show the sample dashboard:
 
-```bash
-python -c "
-import os, time
-from databricks.sdk import WorkspaceClient
-from databricks.sdk.service.sql import StatementState
-os.environ['DATABRICKS_CONFIG_PROFILE']='dbrx_free'
-w = WorkspaceClient()
-sql = open('scripts/bootstrap_schema.sql').read()
-for stmt in [s.strip() for s in sql.split(';') if s.strip()]:
-    r = w.statement_execution.execute_statement(
-        statement=stmt, warehouse_id='5a0ae21a29c598a3', wait_timeout='30s')
-    while r.status.state in (StatementState.PENDING, StatementState.RUNNING):
-        time.sleep(1); r = w.statement_execution.get_statement(r.statement_id)
-    print(stmt[:60], '->', r.status.state)
-"
-```
+1. Workspace → **AI/BI Dashboards → Import dashboard**.
+2. Upload `../dashboard/population_health_executive_dashboard.lvdash.json`.
+3. Attach your SQL warehouse.
+4. Click **Publish**, tick **Embed credentials** (required for the iframe to
+   render without a per-viewer login).
+5. Copy the dashboard ID from the URL — that's the value you'll use for
+   `APP_DASHBOARD_ID`.
+
+Already have your own published dashboard? Just use its ID.
+
+### 4. Create the app's Delta storage
+
+Open `scripts/bootstrap_schema.sql` in the **Databricks SQL Editor** (or any
+notebook attached to your warehouse) and click **Run**. The script is
+idempotent, so it's safe to re-run any time.
+
+If your catalog / schema names differ from the defaults, edit the two
+identifiers at the top of the file before running.
+
+### 5. (Optional) Point the app at different objects
+
+Only needed if your catalog, schemas, or dashboard don't match the defaults
+in the table above. Either export the env vars locally, or uncomment them in
+`app.yaml` before deploying.
 
 ## Run locally
 
@@ -87,62 +114,86 @@ for stmt in [s.strip() for s in sql.split(';') if s.strip()]:
 python -m venv .venv && source .venv/bin/activate
 pip install -r app/requirements.txt
 
+# Copy the env template and fill it in
+cp app/.env.example app/.env
+# (edit app/.env with your profile + warehouse id)
+
 # From the app/ directory
 cd app
-DATABRICKS_CONFIG_PROFILE=dbrx_free \
-DATABRICKS_WAREHOUSE_ID=5a0ae21a29c598a3 \
+set -a && source .env && set +a   # export every var in .env
 streamlit run app.py
 ```
 
-The connection helper in `lib/db.py` will:
+What the connection helper (`lib/db.py`) does:
 
-- Use the `dbrx_free` CLI profile when running locally (no OBO header).
-- Use the `X-Forwarded-Access-Token` header when running on the Databricks
-  Apps platform so `current_user()` reflects the actual viewer.
+- **Local**: uses your CLI profile. `current_user()` resolves to the logged-in
+  user — useful for demoing the audit trail on Tab 3.
+- **On Databricks Apps**: uses the `X-Forwarded-Access-Token` header (OBO) so
+  `current_user()` reflects the actual viewer, not the app service principal.
 
 ## Deploy to Databricks Apps
 
+### 1. Edit `app.yaml`
+
+Open `app.yaml` and replace `<YOUR_WAREHOUSE_ID>` with the real warehouse ID.
+Optionally uncomment the `APP_*` env overrides if your catalog / dashboard
+names differ from the defaults.
+
+### 2. Create the app
+
 ```bash
-# One-time: create the app (only if it doesn't exist yet)
-databricks apps create geo-market-intel --profile dbrx_free
-
-# Grant the app service principal access (one-time)
-SP=$(databricks apps get geo-market-intel --profile dbrx_free \
-       | python -c "import json,sys; print(json.load(sys.stdin)['service_principal_client_id'])")
-for STMT in \
-  "GRANT USE CATALOG ON CATALOG eli_lilly_demo TO \`$SP\`" \
-  "GRANT USE SCHEMA, SELECT ON SCHEMA eli_lilly_demo.gold_claims TO \`$SP\`" \
-  "GRANT USE SCHEMA, SELECT ON SCHEMA eli_lilly_demo.silver_claims TO \`$SP\`" \
-  "GRANT USE SCHEMA, SELECT, MODIFY ON SCHEMA eli_lilly_demo.app_data TO \`$SP\`"; do
-  databricks sql-statements execute --warehouse-id 5a0ae21a29c598a3 \
-    --statement "$STMT" --profile dbrx_free
-done
-
-# Sync just the app/ directory to the workspace, then deploy
-USER_EMAIL=$(databricks current-user me --profile dbrx_free \
-              | python -c "import json,sys; print(json.load(sys.stdin)['userName'])")
-SRC="/Workspace/Users/${USER_EMAIL}/geo-market-intel"
-
-# Run from the repo root so only app/ contents get uploaded:
-databricks sync --watch=false \
-  --exclude '.venv/**' --exclude '__pycache__/**' --exclude '*.pyc' \
-  app "$SRC" --profile dbrx_free
-
-databricks apps deploy geo-market-intel \
-  --source-code-path "$SRC" --profile dbrx_free
+databricks apps create <YOUR_APP_NAME> --profile <YOUR_PROFILE_NAME>
 ```
 
-After deploy completes, `databricks apps get geo-market-intel` returns the
-public URL. The current deployment is at
-<https://geo-market-intel-7474656071514307.aws.databricksapps.com>.
+### 3. Grant the app service principal access
 
-## Reference
+```bash
+# Print the service principal client id — you'll paste it into the SQL script.
+databricks apps get <YOUR_APP_NAME> --profile <YOUR_PROFILE_NAME> \
+  | python -c "import json,sys; print(json.load(sys.stdin)['service_principal_client_id'])"
+```
 
-- Catalog: `eli_lilly_demo`
-- Source tables: `gold_claims.patient_summary` (1,485 rows),
-  `gold_claims.claims_analytics`, `silver_claims.diagnosis`
-- App-owned table: `app_data.territory_definitions`
-- SQL Warehouse: `5a0ae21a29c598a3` (Serverless Starter, 2X-Small PRO)
-- Dashboard: `01f13ac6dda01c0da0fc8039401cd345`
-  (`Population Health Executive Dashboard - Eli Lilly`, published with
-  `embed_credentials: true` so the iframe renders without a per-viewer login)
+Open `scripts/grant_sp_access.sql` in the **Databricks SQL Editor**, replace
+`<APP_SERVICE_PRINCIPAL_CLIENT_ID>` with the value printed above, and run it.
+
+### 4. Sync source & deploy
+
+```bash
+# Destination path inside the workspace for the app's source code.
+USER_EMAIL=$(databricks current-user me --profile <YOUR_PROFILE_NAME> \
+             | python -c "import json,sys; print(json.load(sys.stdin)['userName'])")
+SRC="/Workspace/Users/${USER_EMAIL}/<YOUR_APP_NAME>"
+
+# Run from the repo root so only the app/ folder is uploaded.
+databricks sync --watch=false \
+  --exclude '.venv/**' --exclude '__pycache__/**' --exclude '*.pyc' \
+  --exclude '.env' --exclude '.env.*' \
+  app "$SRC" --profile <YOUR_PROFILE_NAME>
+
+databricks apps deploy <YOUR_APP_NAME> \
+  --source-code-path "$SRC" --profile <YOUR_PROFILE_NAME>
+```
+
+After deploy finishes, the app's URL is in:
+
+```bash
+databricks apps get <YOUR_APP_NAME> --profile <YOUR_PROFILE_NAME>
+```
+
+## Troubleshooting
+
+| Symptom | Fix |
+| --- | --- |
+| `DATABRICKS_WAREHOUSE_ID is not set` on startup | Export it locally (via `.env`) or ensure `app.yaml` has a valid warehouse id for `sql_warehouse`. |
+| Tab 1 shows a host-resolution error | Set `DATABRICKS_HOST` or make sure `DATABRICKS_CONFIG_PROFILE` points to a profile with a valid host. |
+| Tab 1 iframe loads a login screen | Re-publish the dashboard with **Embed credentials** enabled, or update `APP_DASHBOARD_ID`. |
+| `PERMISSION_DENIED` on any table | Re-run `scripts/grant_sp_access.sql` with the correct service principal. |
+| `current_user()` returns the SP client id on Tab 2 | The OBO header wasn't forwarded. Make sure you're visiting the deployed app URL (not a direct warehouse query). |
+
+## What's where in the code
+
+- `lib/config.py` — read once at startup; every catalog / schema / table name
+  the app uses is built here.
+- `lib/queries.py` — every SQL statement the app runs, parameterized.
+- `lib/db.py` — connection helpers; auto-picks OBO token vs CLI profile.
+- `app.py` — Streamlit UI for the three tabs.

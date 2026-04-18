@@ -27,3 +27,8 @@ Thumbs.db
 # Local scratch
 *.log
 /tmp/
+
+# Local env overrides (keep .env.example checked in)
+.env
+.env.local
+

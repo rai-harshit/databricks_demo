@@ -1,3 +1,13 @@
+# Databricks Apps deployment manifest.
+# See https://docs.databricks.com/en/dev-tools/databricks-apps/configuration.html
+#
+# Before deploying:
+#   1. Replace <YOUR_WAREHOUSE_ID> below with the ID of the SQL warehouse the
+#      app should query. Find it under SQL Warehouses > (warehouse) > the
+#      trailing segment of "Connection details" > HTTP Path.
+#   2. (Optional) Override APP_CATALOG, APP_DASHBOARD_ID, etc. here if your
+#      Unity Catalog names or dashboard differ from the demo defaults.
+
 command:
   - "streamlit"
   - "run"
@@ -6,12 +16,29 @@ command:
 env:
   - name: STREAMLIT_BROWSER_GATHER_USAGE_STATS
     value: "false"
+  # DATABRICKS_WAREHOUSE_ID is populated automatically from the warehouse
+  # resource below — do not hard-code it here.
   - name: DATABRICKS_WAREHOUSE_ID
     valueFrom: sql_warehouse
 
+  # Uncomment and edit any of these to point the app at a different
+  # catalog / schema / dashboard without changing code.
+  # - name: APP_CATALOG
+  #   value: "my_catalog"
+  # - name: APP_SILVER_SCHEMA
+  #   value: "silver_claims"
+  # - name: APP_GOLD_SCHEMA
+  #   value: "gold_claims"
+  # - name: APP_SCHEMA
+  #   value: "app_data"
+  # - name: APP_DASHBOARD_ID
+  #   value: "<your-published-dashboard-id>"
+  # - name: APP_DASHBOARD_NAME
+  #   value: "Population Health Executive Dashboard"
+
 resources:
   - name: sql_warehouse
-    description: "Serverless Starter Warehouse used for all queries"
+    description: "SQL Warehouse used for all queries issued by the app"
     sql_warehouse:
-      id: 5a0ae21a29c598a3
+      id: <YOUR_WAREHOUSE_ID>
       permission: CAN_USE

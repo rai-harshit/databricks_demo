@@ -16,6 +16,11 @@ import pandas as pd
 import streamlit as st
 
 from lib import queries as Q
+from lib.config import (
+    POPULATION_HEALTH_DASHBOARD_ID,
+    POPULATION_HEALTH_DASHBOARD_NAME,
+    TERRITORY_TABLE,
+)
 from lib.db import (
     get_current_user,
     get_user_token,
@@ -24,9 +29,6 @@ from lib.db import (
     sql_query,
     sql_scalar,
 )
-
-POPULATION_HEALTH_DASHBOARD_ID = "01f13ac6dda01c0da0fc8039401cd345"
-POPULATION_HEALTH_DASHBOARD_NAME = "Population Health Executive Dashboard - Eli Lilly"
 
 
 # ---------------------------------------------------------------------------
@@ -39,7 +41,7 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("🏥 Geographic Market Intelligence — Eli Lilly")
+st.title("🏥 Geographic Market Intelligence")
 st.caption(
     "End-to-end demo: explore population health data, define custom market "
     "territories, and share them across the team via a Delta table."
@@ -142,7 +144,7 @@ with tab_dashboard:
     if not embed_url:
         st.error(
             "Could not resolve the workspace host. Set `DATABRICKS_HOST` or "
-            "use a CLI profile (e.g. `DATABRICKS_CONFIG_PROFILE=dbrx_free`)."
+            "use a CLI profile (`DATABRICKS_CONFIG_PROFILE=<your-profile>`)."
         )
     else:
         st.iframe(embed_url, height=900)
@@ -155,7 +157,7 @@ with tab_builder:
     st.subheader("Define a new geographic territory")
     st.caption(
         "Select states from the patient population, attach a name and owner, "
-        "and persist it to `eli_lilly_demo.app_data.territory_definitions`."
+        f"and persist it to `{TERRITORY_TABLE}`."
     )
 
     try:
@@ -244,7 +246,7 @@ with tab_builder:
 with tab_view:
     st.subheader("All territories — shared across users")
     st.caption(
-        "Live read of `eli_lilly_demo.app_data.territory_definitions`. "
+        f"Live read of `{TERRITORY_TABLE}`. "
         "Anyone using the app can see and analyze every territory."
     )
 

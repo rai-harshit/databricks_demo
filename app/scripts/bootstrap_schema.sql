@@ -1,5 +1,17 @@
--- Geographic Market Intelligence: app data schema bootstrap.
--- Idempotent: safe to re-run.
+-- Geographic Market Intelligence — one-time schema bootstrap.
+--
+-- What this does:
+--   * Creates the schema used by Tab 2 (Build Territory) to store user input.
+--   * Creates the `territory_definitions` Delta table the app reads/writes.
+--
+-- How to run:
+--   Open this file in the Databricks SQL Editor (or any notebook) and click
+--   Run. Both statements are idempotent — safe to re-run any time.
+--
+-- Customize for your workspace:
+--   If your catalog or schema names differ from the demo defaults, replace
+--   `eli_lilly_demo` / `app_data` below AND set the matching environment
+--   variables (`APP_CATALOG`, `APP_SCHEMA`, ...) in `app.yaml`.
 
 CREATE SCHEMA IF NOT EXISTS eli_lilly_demo.app_data
   COMMENT 'Storage for the Geographic Market Intelligence Streamlit app';
