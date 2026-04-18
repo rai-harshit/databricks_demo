@@ -1,36 +1,66 @@
 # Geographic Market Intelligence — Databricks Demo
 
-End-to-end Databricks demo with three pieces:
+A Streamlit app on Databricks with 3 tabs:
+1. An embedded AI/BI dashboard
+2. A form to define geographic territories
+3. A shared view of everyone's territories with filters + analytics
 
-| Folder | Contents |
-| --- | --- |
-| [`app/`](app) | Streamlit Databricks App (3 tabs: embedded dashboard, territory builder, territory viewer). See [`app/README.md`](app/README.md) for setup and deploy. |
-| [`data_pipeline/`](data_pipeline) | Healthcare Claims Medallion pipeline notebook that produces the Bronze/Silver/Gold tables the app reads. |
-| [`dashboard/`](dashboard) | Exported AI/BI dashboard definition (`.lvdash.json`) that the app embeds on Tab 1. |
+## What's in this repo
 
-## What you get
+```
+data_pipeline/  # Notebook: creates the source Delta tables
+dashboard/      # AI/BI dashboard JSON (embedded on Tab 1)
+app/            # The Streamlit app + deploy script
+```
 
-1. **Import the pipeline notebook** — populates a `*.silver_claims` and
-   `*.gold_claims` set of Delta tables (defaults to the `eli_lilly_demo`
-   catalog; configurable).
-2. **Import the dashboard** — a published AI/BI dashboard rendering patient
-   and claims analytics off those tables.
-3. **Deploy the app** — a Streamlit Databricks App that embeds the dashboard
-   and lets users define, share, and analyze custom geographic territories
-   on top of the same data.
+## Setup (≈15 min)
 
-## Getting started
+You need: a Databricks workspace and a running SQL Warehouse.
 
-Everything workspace-specific (host, warehouse id, catalog, dashboard id) is
-driven by environment variables — you do not need to edit Python. Walk through
-[`app/README.md`](app/README.md) for the full setup.
+**1. Log in.**
+```bash
+databricks auth login --host https://<your-workspace-host>
+```
 
-The only workspace identifiers you need to supply are:
+**2. Create the source tables.**
+Import `data_pipeline/healthcare_claims_medallion_pipeline.ipynb` into your
+workspace and run it. It creates the `eli_lilly_demo` catalog with sample
+patient and claims data.
 
-- your workspace host (e.g. `https://<workspace>.cloud.databricks.com`)
-- a SQL Warehouse ID
-- (optional) the published AI/BI dashboard ID you want to embed
+**3. Import the dashboard.**
+Workspace → **AI/BI Dashboards → Import dashboard**, upload
+`dashboard/population_health_executive_dashboard.lvdash.json`, attach your
+warehouse, **Publish with "Embed credentials" ticked**. Copy the dashboard
+ID from the URL.
 
-Defaults assume the `eli_lilly_demo` catalog with `silver_claims`,
-`gold_claims`, and `app_data` schemas; override via `APP_CATALOG`,
-`APP_*_SCHEMA`, etc. if yours differ.
+**4. Create the app's table.**
+Paste `app/scripts/1_create_table.sql` into the SQL Editor and run it.
+
+**5. Fill in `app/app.yaml`.**
+Replace `<YOUR_WAREHOUSE_ID>` and `<YOUR_DASHBOARD_ID>`.
+
+**6. Deploy.**
+```bash
+cd app
+./deploy.sh <your-app-name>
+```
+
+The script creates the app, prints the service principal grants for you to
+run, syncs the code, and deploys. The final URL is printed at the end.
+
+## Run locally (optional)
+
+```bash
+cd app
+pip install -r requirements.txt
+export DATABRICKS_CONFIG_PROFILE=DEFAULT          # or your profile name
+export DATABRICKS_WAREHOUSE_ID=<your-warehouse-id>
+streamlit run app.py
+```
+
+## Using a different catalog?
+
+Defaults assume `eli_lilly_demo.{silver_claims,gold_claims,app_data}`. To
+point at your own catalog/schemas, set `APP_CATALOG`, `APP_SILVER_SCHEMA`,
+`APP_GOLD_SCHEMA`, `APP_SCHEMA` in `app/app.yaml`. Full list in
+`app/lib/config.py`.

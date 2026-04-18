@@ -1,16 +1,4 @@
-"""Database access helpers for the Geographic Market Intelligence app.
-
-Centralizes the `databricks-sql-connector` connection so the rest of the app
-can call `sql(query, params=None)` and get back a `pandas.DataFrame`.
-
-Auth resolution (in order):
-  1. If a per-request user token is provided (Databricks Apps OBO flow), it is
-     used directly so `current_user()` reflects the viewer.
-  2. Otherwise the Databricks SDK `Config()` is used. In a deployed App that
-     resolves to the app service principal via the standard env vars; locally
-     it falls back to whatever the active CLI profile provides
-     (set `DATABRICKS_CONFIG_PROFILE=<your-profile>`).
-"""
+"""SQL helpers. Uses the viewer's OBO token in prod, CLI profile locally."""
 
 from __future__ import annotations
 
@@ -26,9 +14,8 @@ def _warehouse_id() -> str:
     wid = os.environ.get("DATABRICKS_WAREHOUSE_ID", "").strip()
     if not wid:
         raise RuntimeError(
-            "DATABRICKS_WAREHOUSE_ID is not set. Locally, export it alongside "
-            "DATABRICKS_CONFIG_PROFILE; in Databricks Apps it is populated "
-            "automatically from the `sql_warehouse` resource in app.yaml."
+            "DATABRICKS_WAREHOUSE_ID is not set. Set it in app.yaml (deploy) "
+            "or export it locally."
         )
     return wid
 

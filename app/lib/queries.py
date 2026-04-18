@@ -1,13 +1,4 @@
-"""All SQL used by the app, kept in one place for easy review.
-
-Naming convention: `Q_*` queries return rows (use `sql_query`),
-`STMT_*` are write statements (use `sql_exec`).
-
-Parameters use the `databricks-sql-connector` `?` placeholder style.
-
-Table names are injected from `lib.config` so the same code works against a
-different catalog / schema just by changing environment variables.
-"""
+"""All SQL used by the app. Table names come from lib.config."""
 
 from .config import (
     DIAGNOSIS_TABLE,
