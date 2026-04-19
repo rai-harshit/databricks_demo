@@ -35,19 +35,22 @@ warehouse, **Publish with "Embed credentials" ticked**.
 **4. Create the app's table.**
 Paste `app/scripts/1_create_table.sql` into the SQL Editor and run it.
 
-**5. Deploy.**
+**5. Edit `app/app.yaml`.**
+Replace `<YOUR_WAREHOUSE_ID>` (under `resources.sql_warehouse.id`) and
+`<YOUR_DASHBOARD_ID>` (under `env.APP_DASHBOARD_ID`).
+
+**6. Deploy.**
 ```bash
 cd app
 ./deploy.sh <your-app-name> <your-profile>
 ```
 
-On the first run the script asks for your warehouse id and dashboard id,
-writes them into `app.yaml`, creates the app, and prints the SQL to run to
-grant the app access. Run that SQL, then run `./deploy.sh` again — that
-second run syncs the code, deploys, and prints the app URL.
+The script creates the app if it doesn't exist yet, syncs the code,
+deploys, and prints the app URL. Run it any time you change the app code.
 
-> If you already set `DATABRICKS_CONFIG_PROFILE` in your shell you can skip
-> the `<your-profile>` argument.
+On the very first run it also prints the app's service principal id — take
+that id, paste it into `scripts/2_grant_sp_access.sql` (replace `<SP>`),
+and run it in the SQL Editor so the app has permission to read your tables.
 
 ## Run locally (optional)
 

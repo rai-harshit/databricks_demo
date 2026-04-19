@@ -8,7 +8,8 @@ env:
   - name: DATABRICKS_WAREHOUSE_ID
     valueFrom: sql_warehouse
 
-  # Dashboard id shown on Tab 1. Filled in by ./deploy.sh on first run.
+  # Dashboard id shown on Tab 1 — get it from the dashboard's URL
+  # (.../dashboardsv3/<THIS_PART>/published).
   - name: APP_DASHBOARD_ID
     value: "<YOUR_DASHBOARD_ID>"
 
@@ -21,6 +22,6 @@ env:
 resources:
   - name: sql_warehouse
     sql_warehouse:
-      # Warehouse id. Filled in by ./deploy.sh on first run.
+      # Warehouse id — SQL Warehouses → (warehouse) → Overview.
       id: "<YOUR_WAREHOUSE_ID>"
       permission: CAN_USE
