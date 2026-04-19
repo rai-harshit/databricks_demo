@@ -3,19 +3,24 @@ command: ["streamlit", "run", "app.py"]
 env:
   - name: STREAMLIT_BROWSER_GATHER_USAGE_STATS
     value: "false"
+
+  # DO NOT EDIT: populated from the sql_warehouse resource below.
   - name: DATABRICKS_WAREHOUSE_ID
     valueFrom: sql_warehouse
+
+  # Dashboard id shown on Tab 1. Filled in by ./deploy.sh on first run.
   - name: APP_DASHBOARD_ID
     value: "<YOUR_DASHBOARD_ID>"
 
-  # Optional — only set these if your catalog/schemas aren't the defaults.
-  # - { name: APP_CATALOG,        value: "my_catalog" }
-  # - { name: APP_SILVER_SCHEMA,  value: "silver_claims" }
-  # - { name: APP_GOLD_SCHEMA,    value: "gold_claims" }
-  # - { name: APP_SCHEMA,         value: "app_data" }
+  # Optional — only set if your catalog/schemas aren't the defaults.
+  # - { name: APP_CATALOG,       value: "my_catalog" }
+  # - { name: APP_SILVER_SCHEMA, value: "silver_claims" }
+  # - { name: APP_GOLD_SCHEMA,   value: "gold_claims" }
+  # - { name: APP_SCHEMA,        value: "app_data" }
 
 resources:
   - name: sql_warehouse
     sql_warehouse:
-      id: <YOUR_WAREHOUSE_ID>
+      # Warehouse id. Filled in by ./deploy.sh on first run.
+      id: "<YOUR_WAREHOUSE_ID>"
       permission: CAN_USE
