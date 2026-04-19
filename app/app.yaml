@@ -4,7 +4,7 @@ env:
   - name: STREAMLIT_BROWSER_GATHER_USAGE_STATS
     value: "false"
 
-  # DO NOT EDIT: populated from the sql_warehouse resource below.
+  # Populated at runtime with the id of the sql_warehouse resource below.
   - name: DATABRICKS_WAREHOUSE_ID
     valueFrom: sql_warehouse
 
@@ -19,6 +19,9 @@ env:
   # - { name: APP_GOLD_SCHEMA,   value: "gold_claims" }
   # - { name: APP_SCHEMA,        value: "app_data" }
 
+# deploy.sh reads this block and attaches the warehouse to the app as a
+# proper resource binding (the Databricks platform does not honor a
+# resources: block in app.yaml on its own).
 resources:
   - name: sql_warehouse
     sql_warehouse:
