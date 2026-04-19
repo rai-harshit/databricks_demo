@@ -11,7 +11,7 @@ env:
   # Dashboard id shown on Tab 1 — get it from the dashboard's URL
   # (.../dashboardsv3/<THIS_PART>/published).
   - name: APP_DASHBOARD_ID
-    value: "<YOUR_DASHBOARD_ID>"
+    value: "01f13ac6dda01c0da0fc8039401cd345"
 
   # Optional — only set if your catalog/schemas aren't the defaults.
   # - { name: APP_CATALOG,       value: "my_catalog" }
@@ -23,5 +23,5 @@ resources:
   - name: sql_warehouse
     sql_warehouse:
       # Warehouse id — SQL Warehouses → (warehouse) → Overview.
-      id: "<YOUR_WAREHOUSE_ID>"
+      id: "5a0ae21a29c598a3"
       permission: CAN_USE

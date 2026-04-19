@@ -300,7 +300,7 @@ with tab_view:
         if state_filter:
             view = view[
                 view["states_included"].apply(
-                    lambda arr: bool(set(arr or []) & set(state_filter))
+                    lambda arr: bool(set(arr if arr is not None else []) & set(state_filter))
                 )
             ]
         if name_filter.strip():
@@ -309,7 +309,7 @@ with tab_view:
 
         view_display = view.copy()
         view_display["states_included"] = view_display["states_included"].apply(
-            lambda arr: ", ".join(arr) if arr is not None else ""
+            lambda arr: ", ".join(arr) if arr is not None and len(arr) > 0 else ""
         )
 
         st.dataframe(
