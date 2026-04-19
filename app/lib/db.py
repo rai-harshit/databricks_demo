@@ -93,30 +93,43 @@ def sql_scalar(
 
 
 def get_user_token() -> str | None:
-    """Return the OBO access token of the current Streamlit viewer, if any.
+    """Deprecated: OBO disabled for Free Edition compatibility.
 
-    Inside a Databricks App the user's access token is forwarded via the
-    `X-Forwarded-Access-Token` header. When running locally there is no such
-    header and we return None so the SDK Config flow takes over.
+    The app now runs all SQL as the service principal. Kept as a stub so
+    existing imports don't break; always returns None.
     """
+    return None
+
+
+def _header(name: str) -> str | None:
     try:
         import streamlit as st
 
         headers = getattr(st.context, "headers", None)
         if headers is None:
             return None
-        token = headers.get("x-forwarded-access-token") or headers.get(
-            "X-Forwarded-Access-Token"
-        )
-        return token or None
+        return headers.get(name) or headers.get(name.lower()) or headers.get(name.title())
     except Exception:
         return None
 
 
 def get_current_user(user_token: str | None = None) -> str:
-    """Return the username of the current user via SQL `current_user()`."""
+    """Return the viewer's email from Databricks Apps forwarded headers.
+
+    Databricks Apps always forwards the viewer identity via
+    `X-Forwarded-Email` / `X-Forwarded-Preferred-Username`, even when OBO
+    user-token passthrough is not enabled (e.g. Free Edition). Falls back to
+    `SELECT current_user()` when running locally.
+    """
+    email = (
+        _header("X-Forwarded-Email")
+        or _header("X-Forwarded-Preferred-Username")
+        or _header("X-Forwarded-User")
+    )
+    if email:
+        return str(email)
     try:
-        return str(sql_scalar("SELECT current_user()", user_token=user_token) or "unknown")
+        return str(sql_scalar("SELECT current_user()") or "unknown")
     except Exception:
         return "unknown"
 

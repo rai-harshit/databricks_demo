@@ -1,7 +1,9 @@
--- Run in the SQL Editor after `./deploy.sh` creates the app.
--- Replace <SP> with the service principal id that deploy.sh prints, then run.
+-- Source of truth for the app SP's Unity Catalog grants.
+-- Applied automatically by `./deploy.sh` — placeholders are substituted
+-- from `app.yaml` and from `databricks apps get <app>`. To run manually,
+-- replace every {{...}} token first.
 
-GRANT USE CATALOG ON CATALOG eli_lilly_demo                    TO `<SP>`;
-GRANT USE SCHEMA, SELECT ON SCHEMA eli_lilly_demo.gold_claims   TO `<SP>`;
-GRANT USE SCHEMA, SELECT ON SCHEMA eli_lilly_demo.silver_claims TO `<SP>`;
-GRANT USE SCHEMA, SELECT, MODIFY ON SCHEMA eli_lilly_demo.app_data TO `<SP>`;
+GRANT USE CATALOG ON CATALOG {{CATALOG}}                              TO `{{SP}}`;
+GRANT USE SCHEMA, SELECT ON SCHEMA {{CATALOG}}.{{GOLD_SCHEMA}}         TO `{{SP}}`;
+GRANT USE SCHEMA, SELECT ON SCHEMA {{CATALOG}}.{{SILVER_SCHEMA}}       TO `{{SP}}`;
+GRANT USE SCHEMA, SELECT, MODIFY ON SCHEMA {{CATALOG}}.{{APP_SCHEMA}}  TO `{{SP}}`;

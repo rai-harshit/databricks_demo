@@ -13,11 +13,16 @@ env:
   - name: APP_DASHBOARD_ID
     value: "01f13ac6dda01c0da0fc8039401cd345"
 
-  # Optional — only set if your catalog/schemas aren't the defaults.
-  # - { name: APP_CATALOG,       value: "my_catalog" }
-  # - { name: APP_SILVER_SCHEMA, value: "silver_claims" }
-  # - { name: APP_GOLD_SCHEMA,   value: "gold_claims" }
-  # - { name: APP_SCHEMA,        value: "app_data" }
+  # Catalog / schema names. Single source of truth — `deploy.sh` parses these
+  # to create the app schema/table and grant the SP access.
+  - name: APP_CATALOG
+    value: "eli_lilly_demo"
+  - name: APP_SILVER_SCHEMA
+    value: "silver_claims"
+  - name: APP_GOLD_SCHEMA
+    value: "gold_claims"
+  - name: APP_SCHEMA
+    value: "app_data"
 
 resources:
   - name: sql_warehouse

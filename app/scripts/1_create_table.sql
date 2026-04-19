@@ -1,9 +1,11 @@
--- Run once in the Databricks SQL Editor before the first deploy.
--- Safe to re-run. Creates the schema and table the app writes to.
+-- Source of truth for the app's schema + territory_definitions table.
+-- Applied automatically by `./deploy.sh` — placeholders are substituted
+-- from `app.yaml`. To run manually in the SQL Editor, replace
+-- {{CATALOG}} and {{APP_SCHEMA}} with your actual names.
 
-CREATE SCHEMA IF NOT EXISTS eli_lilly_demo.app_data;
+CREATE SCHEMA IF NOT EXISTS {{CATALOG}}.{{APP_SCHEMA}};
 
-CREATE TABLE IF NOT EXISTS eli_lilly_demo.app_data.territory_definitions (
+CREATE TABLE IF NOT EXISTS {{CATALOG}}.{{APP_SCHEMA}}.territory_definitions (
   territory_id     INT,
   territory_name   STRING,
   states_included  ARRAY<STRING>,

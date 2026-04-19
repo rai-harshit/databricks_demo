@@ -70,8 +70,10 @@ def insert_territory_stmt(num_states: int) -> str:
     """Build a parameterized INSERT for a territory with `num_states` states.
 
     `states_included` is built with an inline `ARRAY(?, ?, ...)` literal so we
-    can pass each state as its own parameter. `created_date` and `created_by`
-    are filled server-side via SQL functions.
+    can pass each state as its own parameter. `created_by` is passed in as a
+    parameter (viewer email from `X-Forwarded-Email`, since the app runs SQL
+    as the service principal — `current_user()` would otherwise return the
+    SP). `created_date` is filled server-side.
     """
     array_placeholders = ", ".join(["?"] * num_states) if num_states else ""
     array_expr = f"ARRAY({array_placeholders})" if num_states else "ARRAY()"
@@ -79,7 +81,7 @@ def insert_territory_stmt(num_states: int) -> str:
         INSERT INTO {TERRITORY_TABLE}
           (territory_id, territory_name, states_included,
            owner_name, created_by, created_date, notes)
-        VALUES (?, ?, {array_expr}, ?, current_user(), current_timestamp(), ?)
+        VALUES (?, ?, {array_expr}, ?, ?, current_timestamp(), ?)
     """
 
 # ---------------------------------------------------------------------------

@@ -23,7 +23,6 @@ from lib.config import (
 )
 from lib.db import (
     get_current_user,
-    get_user_token,
     get_workspace_host,
     sql_exec,
     sql_query,
@@ -46,8 +45,6 @@ st.caption(
     "End-to-end demo: explore population health data, define custom market "
     "territories, and share them across the team via a Delta table."
 )
-
-USER_TOKEN = get_user_token()
 
 
 # Static lookup so multi-select can show "California (CA)" but store the code.
@@ -80,17 +77,17 @@ def _state_label(code: str) -> str:
 
 @st.cache_data(ttl=300, show_spinner=False)
 def load_distinct_states() -> list[str]:
-    df = sql_query(Q.Q_DISTINCT_STATES, user_token=USER_TOKEN)
+    df = sql_query(Q.Q_DISTINCT_STATES)
     return df["state"].dropna().tolist()
 
 
 def load_territories() -> pd.DataFrame:
-    return sql_query(Q.Q_ALL_TERRITORIES, user_token=USER_TOKEN)
+    return sql_query(Q.Q_ALL_TERRITORIES)
 
 
 def load_territory_summary() -> tuple[int, int, int]:
-    summary = sql_query(Q.Q_TERRITORY_SUMMARY, user_token=USER_TOKEN)
-    states = sql_scalar(Q.Q_UNIQUE_STATES_COVERED, user_token=USER_TOKEN)
+    summary = sql_query(Q.Q_TERRITORY_SUMMARY)
+    states = sql_scalar(Q.Q_UNIQUE_STATES_COVERED)
     if summary.empty:
         return 0, 0, int(states or 0)
     row = summary.iloc[0]
@@ -102,7 +99,7 @@ def load_territory_summary() -> tuple[int, int, int]:
 
 
 def load_territory_rollup() -> pd.DataFrame:
-    return sql_query(Q.Q_TERRITORY_PATIENT_ROLLUP, user_token=USER_TOKEN)
+    return sql_query(Q.Q_TERRITORY_PATIENT_ROLLUP)
 
 
 # ---------------------------------------------------------------------------
@@ -166,12 +163,12 @@ with tab_builder:
         st.error(f"Failed to load state list: {exc}")
         available_states = []
 
-    current_user = get_current_user(USER_TOKEN)
+    current_user = get_current_user()
 
     info_cols = st.columns(2)
     info_cols[0].text_input(
         "Created by", value=current_user, disabled=True,
-        help="Auto-filled from current_user() — cannot be edited.",
+        help="Auto-filled from the signed-in viewer (X-Forwarded-Email).",
     )
     info_cols[1].text_input(
         "Created date",
@@ -218,18 +215,17 @@ with tab_builder:
             st.error("Missing required fields: " + ", ".join(missing))
         else:
             try:
-                next_id = int(
-                    sql_scalar(Q.Q_NEXT_TERRITORY_ID, user_token=USER_TOKEN) or 1
-                )
+                next_id = int(sql_scalar(Q.Q_NEXT_TERRITORY_ID) or 1)
                 stmt = Q.insert_territory_stmt(len(states))
                 params = [
                     next_id,
                     territory_name.strip(),
                     *states,
                     owner_name.strip(),
+                    current_user,
                     notes.strip() or None,
                 ]
-                sql_exec(stmt, params, user_token=USER_TOKEN)
+                sql_exec(stmt, params)
             except Exception as exc:
                 st.error(f"Save failed: {exc}")
             else:
@@ -384,10 +380,7 @@ with tab_view:
                 )
                 if st.button("Delete", type="secondary", disabled=not confirm):
                     try:
-                        sql_exec(
-                            Q.STMT_DELETE_TERRITORY, [int(target)],
-                            user_token=USER_TOKEN,
-                        )
+                        sql_exec(Q.STMT_DELETE_TERRITORY, [int(target)])
                     except Exception as exc:
                         st.error(f"Delete failed: {exc}")
                     else:
