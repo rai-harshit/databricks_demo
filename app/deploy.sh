@@ -92,6 +92,23 @@ run_sql_file() {
   done < <(echo "$rendered" | tr '\n' ' ' | tr ';' '\n')
 }
 
+echo "Ensuring warehouse $WID is RUNNING…"
+databricks warehouses start "$WID" --profile "$PROFILE" >/dev/null 2>&1 || true
+
+deadline=$((SECONDS + 300))
+while :; do
+  state=$(databricks warehouses get "$WID" --profile "$PROFILE" | jq -r '.state')
+  case "$state" in
+    RUNNING) break ;;
+    STARTING|PENDING) ;;
+    STOPPED|STOPPING|DELETED|DELETING)
+      echo "Warehouse $WID is in unusable state: $state" >&2; exit 1 ;;
+  esac
+  (( SECONDS > deadline )) && { echo "Warehouse not RUNNING after 5m (last state: $state)" >&2; exit 1; }
+  sleep 3
+done
+echo "Warehouse is RUNNING."
+
 echo "Applying scripts/1_create_table.sql…"
 run_sql_file scripts/1_create_table.sql
 
