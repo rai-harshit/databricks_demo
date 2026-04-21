@@ -21,22 +21,28 @@ running `deploy.sh` must have MANAGE (or ownership) on the target
 catalog/schemas so it can create the app's schema+table and grant the
 app's service principal access.
 
-**1. Log in.**
+**1. Install the Databricks CLI.**
+If you don't already have it, follow the
+[official install guide](https://docs.databricks.com/aws/en/dev-tools/cli/install)
+(on macOS: `brew tap databricks/tap && brew install databricks`). Verify
+with `databricks -v` — you need version `0.205.0` or above.
+
+**2. Log in.**
 ```bash
 databricks auth login --host https://<your-workspace-host> --profile <your-profile>
 ```
 
-**2. Create the source tables.**
+**3. Create the source tables.**
 Import `data_pipeline/healthcare_claims_medallion_pipeline.ipynb` into
 your workspace and run it. It creates the `eli_lilly_demo` catalog with
 sample patient and claims data.
 
-**3. Import the dashboard.**
+**4. Import the dashboard.**
 Workspace → **AI/BI Dashboards → Import dashboard**, upload
 `dashboard/population_health_executive_dashboard.lvdash.json`, attach
 your warehouse, **Publish with "Embed credentials" ticked**.
 
-**4. (Optional) Import the Genie Space.**
+**5. (Optional) Import the Genie Space.**
 Gives stakeholders a natural-language chat interface over the same claims
 data. Import `genie_spaces/Import Export Genie Space.ipynb` into your
 workspace, open the second cell ("Import Genie Space from JSON"), point
@@ -45,14 +51,14 @@ workspace, open the second cell ("Import Genie Space from JSON"), point
 then run the cell. See [`genie_spaces/README.md`](genie_spaces/README.md)
 for details. The app itself does not depend on this step.
 
-**5. Edit `app/app.yaml`.**
+**6. Edit `app/app.yaml`.**
 Set these two per-workspace values (the rest already have sensible
 defaults):
 - `resources.sql_warehouse.id` — your SQL Warehouse id.
 - `env.APP_DASHBOARD_ID` — the id from the dashboard's published URL
   (`.../dashboardsv3/<THIS_PART>/published`).
 
-**6. Deploy.**
+**7. Deploy.**
 ```bash
 cd app
 ./deploy.sh <your-app-name> <your-profile>
