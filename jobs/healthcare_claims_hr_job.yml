@@ -1,0 +1,25 @@
+resources:
+  jobs:
+    healthcare_claims_hr_job:
+      name: healthcare_claims_hr_job
+      tasks:
+        - task_key: setup
+          notebook_task:
+            notebook_path: /Users/harshit.rai@databricks.com/databricks_demo/data_pipeline/healthcare_claims_setup
+            source: WORKSPACE
+          description: Check and create catalogs/schemas
+        - task_key: bronze_to_silver
+          depends_on:
+            - task_key: setup
+          notebook_task:
+            notebook_path: /Users/harshit.rai@databricks.com/databricks_demo/data_pipeline/healthcare_claims_bronze_to_silver
+            source: WORKSPACE
+          description: Bronze to Silver transformations - cleansing, deduplication,
+            standardization
+        - task_key: silver_to_gold
+          depends_on:
+            - task_key: bronze_to_silver
+          notebook_task:
+            notebook_path: /Users/harshit.rai@databricks.com/databricks_demo/data_pipeline/healthcare_claims_silver_to_gold
+            source: WORKSPACE
+          description: Silver to Gold transformations and pipeline validation
